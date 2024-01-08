@@ -1,4 +1,4 @@
-const { Thought, User } = require('../models');
+const { Thought, User, Reaction } = require('../models');
 
 const thoughtController = {
   getAllThoughts: async (req, res) => {
@@ -28,7 +28,6 @@ const thoughtController = {
     const { thoughtText, username, userId } = req.body;
     try {
       const newThought = await Thought.create({ thoughtText, username });
-      // Update user's thoughts array
       await User.findByIdAndUpdate(userId, { $push: { thoughts: newThought._id } });
       res.json(newThought);
     } catch (err) {
@@ -61,10 +60,60 @@ const thoughtController = {
       if (!deletedThought) {
         return res.status(404).json({ message: 'Thought not found' });
       }
-      // Remove thought from associated user's thoughts array
       await User.updateMany({}, { $pull: { thoughts: thoughtId } });
       res.json(deletedThought);
     } catch (err) {
+      res.status(500).json(err);
+    }
+  },
+
+  createReaction: async (req, res) => {
+    const { thoughtId } = req.params;
+    const { reactionBody, username } = req.body;
+
+    try {
+      const newReaction = await Reaction.create({ reactionBody, username });
+      
+      const updatedThought = await Thought.findByIdAndUpdate(
+        thoughtId,
+        { $push: { reactions: newReaction._id } },
+        { new: true }
+      );
+
+      if (!updatedThought) {
+        return res.status(404).json({ message: 'Thought not found' });
+      }
+
+      res.json(newReaction);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json(err);
+    }
+  },
+
+  deleteReaction: async (req, res) => {
+    const { thoughtId, reactionId } = req.params;
+
+    try {
+      const updatedThought = await Thought.findByIdAndUpdate(
+        thoughtId,
+        { $pull: { reactions: reactionId } },
+        { new: true }
+      );
+
+      if (!updatedThought) {
+        return res.status(404).json({ message: 'Thought not found' });
+      }
+
+      const deletedReaction = await Reaction.findByIdAndDelete(reactionId);
+
+      if (!deletedReaction) {
+        return res.status(404).json({ message: 'Reaction not found' });
+      }
+
+      res.json(deletedReaction);
+    } catch (err) {
+      console.error(err);
       res.status(500).json(err);
     }
   },

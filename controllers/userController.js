@@ -58,11 +58,54 @@ const userController = {
       if (!deletedUser) {
         return res.status(404).json({ message: 'User not found' });
       }
-      // BONUS: Remove user's associated thoughts
-      // ...
 
       res.json(deletedUser);
     } catch (err) {
+      res.status(500).json(err);
+    }
+  },
+
+  addFriend: async (req, res) => {
+    const { userId, friendId } = req.params;
+
+    try {
+      const user = await User.findById(userId);
+      const friend = await User.findById(friendId);
+
+      if (!user || !friend) {
+        return res.status(404).json({ message: 'User or friend not found' });
+      }
+
+      if (user.friends.includes(friendId)) {
+        return res.status(400).json({ message: 'Friend already added' });
+      }
+
+      user.friends.push(friendId);
+      await user.save();
+
+      res.json(user);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json(err);
+    }
+  },
+
+  removeFriend: async (req, res) => {
+    const { userId, friendId } = req.params;
+
+    try {
+      const user = await User.findById(userId);
+
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      user.friends.pull(friendId);
+      await user.save();
+
+      res.json(user);
+    } catch (err) {
+      console.error(err);
       res.status(500).json(err);
     }
   },
